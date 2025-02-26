@@ -58,13 +58,27 @@ class SettingController extends Controller
             $razorpay['razorpay_key'] = $razorpay_credentials['razorpay_key'];
             $razorpay['razorpay_secret'] = $razorpay_credentials['razorpay_secret'];
         }
+        $mailSetting = [];
+        $mail = Setting::where('key','mail_config')->first();
+        if (!empty($mail)) {
+            $mail_credentials = json_decode($mail->value, true);
+            $mailSetting['mail_driver'] = $mail_credentials['mail_driver'];
+            $mailSetting['mail_host'] = $mail_credentials['mail_host'];
+            $mailSetting['mail_port'] = $mail_credentials['mail_port'];
+            $mailSetting['mail_address'] = $mail_credentials['mail_address'];
+            $mailSetting['username'] = $mail_credentials['username'];
+            $mailSetting['password'] = $mail_credentials['password'];
+            $mailSetting['from_name'] = $mail_credentials['from_name'];
+            $mailSetting['encryption'] = $mail_credentials['encryption'];
+        }
         //dd($paypal);
         return view('admin.setting.index', compact(
             'data', 
             'allTimezones',
             'stripe',
             'paypal',
-            'razorpay'
+            'razorpay',
+            'mailSetting'
         ));
     }
 
@@ -93,7 +107,7 @@ class SettingController extends Controller
        
     }
 
-    public function paymentSettings(PaymentSettingRequest $request)
+    public function paymentSettings(Request $request)
     {
         SettingService::SettingUpdateOrInsert(
             ['key' => 'stripe_credentials'],
@@ -128,5 +142,55 @@ class SettingController extends Controller
         );
         $redirect = route('admin.settings.index');
         return  $this->success($redirect, 'Payment setting updated successfully.');
+    }
+
+    public function smtpSettings(Request $request)
+    {
+        SettingService::SettingUpdateOrInsert(
+            ['key' => 'mail_config'],
+            [
+                'value' => json_encode([
+                    "mail_driver" => $request['mail_driver'],
+                    "mail_host" => $request['mail_host'],
+                    "mail_port" => $request['mail_port'],
+                    "mail_address" => $request['mail_address'],
+                    "username" => $request['username'],
+                    "password" => $request['password'],
+                    "from_name" => $request['from_name'],
+                    "encryption" => $request['encryption'],
+                ])
+            ]
+        );
+        $redirect = route('admin.settings.index');
+        return  $this->success($redirect, 'Mail setting updated successfully.');
+    }
+
+    public function seoSettings(Request $request)
+    {
+        $seoSetting= Setting::where('key','seo_data')->first();
+        if (!empty($seodata)) {
+            $seo = json_decode($seoSetting->value, true);
+        }
+
+        
+            if ($request->hasFile('og_image')) {
+                $uploaded_file = $request->file('og_image');
+                $file_path = $this->fileService->store($uploaded_file, '/logo');
+            }
+        
+        SettingService::SettingUpdateOrInsert(
+            ['key' => 'seo_data'],
+            [
+                'value' => json_encode([
+                    "meta_title" => $request['meta_title'],
+                    "meta_description" => $request['meta_description'],
+                    "og_title" => $request['og_title'],
+                    "og_description" => $request['og_description'],
+                    "og_image" => $file_path,
+                ])
+            ]
+        );
+        $redirect = route('admin.settings.index');
+        return  $this->success($redirect, 'Mail setting updated successfully.');
     }
 }
